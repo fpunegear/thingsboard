@@ -1,25 +1,26 @@
 # Thingboard con docker y postgres
+
 ### Url de guia
 https://thingsboard.io/docs/user-guide/install/docker-windows/
 
 ## Pre requisitos
 - docker
 
-## Volumes
-Usuarios windows deben administrar volumenes
-
-docker volume create mytb-data
-docker volume create mytb-logs
-
-
 ## Ejecutar docker compose
 
+```
+# Para iniciar el contenedor
 docker compose up -d
-docker compose logs -f mytb
 
+# Para visualizar los logs
+docker compose logs -f mytb
+```
 
 ## Donde corre
+
+```
 http://localhost:8080
+```
 
 ## Usuarios por defecto
 - System Administrator: sysadmin@thingsboard.org / sysadmin
