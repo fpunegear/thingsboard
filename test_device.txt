@@ -1,0 +1,35 @@
+A1_TEST_TOKEN
+
+
+curl --location 'http://localhost:8080/api/v1/A1_TEST_TOKEN/telemetry' \
+--header 'Content-Type: application/json' \
+--data '{
+    "id": "ASD123",
+    "side": "right",
+    "values": [
+        {
+            "weight": 0.5,
+            "position": 25
+        },
+        {
+            "weight": 0.6,
+            "position": 23
+        },
+        {
+            "weight": 0.8,
+            "position": 12
+        },
+        {
+            "weight": 0.1,
+            "position": 26
+        },
+        {
+            "weight": 0.5,
+            "position": 12
+        },
+        {
+            "weight": 0.5,
+            "position": 10
+        }
+    ]
+}'
