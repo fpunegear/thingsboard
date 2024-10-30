@@ -1,6 +1,7 @@
+## Token de acceso
 A1_TEST_TOKEN
 
-
+## CURL
 curl --location 'http://localhost:8080/api/v1/A1_TEST_TOKEN/telemetry' \
 --header 'Content-Type: application/json' \
 --data '{
@@ -33,3 +34,11 @@ curl --location 'http://localhost:8080/api/v1/A1_TEST_TOKEN/telemetry' \
         }
     ]
 }'
+
+
+
+## Ejemplo usando mosquitto
+
+mosquitto_pub -d -q 1 -h localhost -p 1883 -t v1/devices/me/telemetry -i "tst" -u "tst" -P "test" -m "{temperature:25}"
+
+
