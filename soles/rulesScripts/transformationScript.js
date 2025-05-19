@@ -1,61 +1,87 @@
 // Ejemplo de json enviado por suela
 // {
 //     "id": "ASD123",
-//     "side": "right"|"left",
-//     "values": [
+//     "sd": "right",
+//     "vl": [
 //         {
-//             "weight": 10,
-//             "positionX": 1,
-//             "positionY": 1
+//         "w": 4095,
+//         "p": [
+//             12.2,
+//             10.3
+//         ]
 //         },
 //         {
-//             "weight": 11,
-//             "positionX": 1,
-//             "positionY": 2
+//         "w": 4095,
+//         "p": [
+//             12.5,
+//             11.3
+//         ]
 //         },
 //         {
-//             "weight": 10,
-//             "positionX": 1,
-//             "positionY": 3
+//         "w": 4095,
+//         "p": [
+//             13,
+//             12.1
+//         ]
 //         },
 //         {
-//             "weight": 9,
-//             "positionX": 2,
-//             "positionY": 3
+//         "w": 4095,
+//         "p": [
+//             14.4,
+//             13.5
+//         ]
 //         },
 //         {
-//             "weight": 8,
-//             "positionX": 4,
-//             "positionY": 3
+//         "w": 4095,
+//         "p": [
+//             15.2,
+//             14.8
+//         ]
 //         },
 //         {
-//             "weight": 13,
-//             "positionX": 2,
-//             "positionY": 5
+//         "w": 4095,
+//         "p": [
+//             16.1,
+//             15.9
+//         ]
+//         },
+//         {
+//         "w": 4095,
+//         "p": [
+//             17.3,
+//             16.4
+//         ]
+//         },
+//         {
+//         "w": 3983,
+//         "p": [
+//             18,
+//             17.2
+//         ]
 //         }
 //     ]
-// }
+//  }
 
 var sumWeight = 0;
 var sumPositionX = 0;
 var sumPositionY = 0;
 var xArray = [];
 var yArray = [];
-var higherPressureValue = msg.values[0];
+var higherPressureValue = msg.vl[0];
 var typeOfFootprint = "";
 
-for (var i = 0; i < msg.values.length; i++) {
-    var value = msg.values[i];
-    sumWeight += value.weight;
-    sumPositionX += value.positionX * value.weight;
-    sumPositionY += value.positionY * value.weight;
+for (var i = 0; i < msg.vl.length; i++) {
+    var value = msg.vl[i];
+    sumWeight += value.w;
+    sumPositionX += value.p[0] * value.w;
+    sumPositionY += value.p[1] * value.w;
 
     // populate positions array
-    xArray.push(value.positionX);
-    yArray.push(value.positionY);
+    xArray.push(value.p[0]);
+    yArray.push(value.p[1]);
 
     // find the high pressure
-    if (value.weight > higherPressureValue.weight) {
+    if (value.w > higherPressureValue.w) {
         higherPressureValue = value;
     }
 }
@@ -90,16 +116,16 @@ if (centerMassX < pronationLimit) {
 }
 
 return {
-    msg: { 
+    msg: {
         id: msg.id,
-        side: msg.side,
-        values: msg.values,
+        sd: msg.sd,
+        vl: msg.vl,
         centerOfMass: [centerMassX, centerMassY],
         footLength: footLength,
         footWidth: footWidth,
         typeOfFootprint: typeOfFootprint,
         higherPressureValue: higherPressureValue
-    }, 
+    },
     metadata: metadata, 
     msgType: msgType
 };

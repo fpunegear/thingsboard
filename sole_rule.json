@@ -1,0 +1,107 @@
+{
+  "ruleChain": {
+    "name": "Sole Rule",
+    "type": "CORE",
+    "firstRuleNodeId": null,
+    "root": false,
+    "debugMode": false,
+    "configuration": null,
+    "additionalInfo": {
+      "description": ""
+    }
+  },
+  "metadata": {
+    "version": 9,
+    "firstNodeIndex": 0,
+    "nodes": [
+      {
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "Sole-selection",
+        "debugMode": true,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "return msg.values != null \r\n    && msg.values.length > 0;",
+          "tbelScript": "return msg.temperature > 20;"
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 150,
+          "layoutY": 22
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "footprint-diagnosis",
+        "debugMode": true,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "\r\nvar sumWeight = 0;\r\nvar sumPositionX = 0;\r\nvar sumPositionY = 0;\r\nvar xArray = [];\r\nvar yArray = [];\r\nvar higherPressureValue = msg.values[0];\r\nvar typeOfFootprint = \"\";\r\n\r\nfor (var i = 0; i < msg.values.length; i++) {\r\n    var value = msg.values[i];\r\n    sumWeight += value.weight;\r\n    sumPositionX += value.positionX * value.weight;\r\n    sumPositionY += value.positionY * value.weight;\r\n\r\n    // populate positions array\r\n    xArray.push(value.positionX);\r\n    yArray.push(value.positionY);\r\n\r\n    // find the high pressure\r\n    if (value.weight > higherPressureValue.weight) {\r\n        higherPressureValue = value;\r\n    }\r\n}\r\n\r\n// Verificar que sumWeight no sea 0 para evitar división por 0\r\nvar centerMassX = sumWeight && sumPositionX / sumWeight;\r\nvar centerMassY = sumWeight && sumPositionY / sumWeight;\r\n\r\n// Calcular la medida del pie\r\nvar minX = Math.min.apply(null, xArray);\r\nvar maxX = Math.max.apply(null, xArray);\r\nvar minY = Math.min.apply(null, yArray);\r\nvar maxY = Math.max.apply(null, yArray);\r\n\r\nvar footLength = maxX;\r\nvar footWidth = maxY;\r\n\r\n// Determinar tipo de pisada\r\nvar pronationLimit = footLength * 0.3;\r\nvar supinationLimit = footLength * 0.7;\r\n\r\nif (centerMassX < pronationLimit) {\r\n    typeOfFootprint = \"sobrepronacion\";\r\n} else if (centerMassX < pronationLimit * 1.1) {\r\n    typeOfFootprint = \"pronacion\";\r\n} else if (centerMassX > supinationLimit) {\r\n    typeOfFootprint = \"sobresupinacion\";\r\n} else if (centerMassX > supinationLimit * 0.9) {\r\n    typeOfFootprint = \"supinacion\";\r\n} else {\r\n    typeOfFootprint = \"neutra\";\r\n}\r\n\r\nreturn {\r\n    msg: { \r\n        id: msg.id,\r\n        side: msg.side,\r\n        values: msg.values,\r\n        centerOfMass: [centerMassX, centerMassY],\r\n        footLength: footLength,\r\n        footWidth: footWidth,\r\n        typeOfFootprint: typeOfFootprint,\r\n        higherPressureValue: higherPressureValue\r\n    }, \r\n    metadata: metadata, \r\n    msgType: msgType\r\n};",
+          "tbelScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 423,
+          "layoutY": 21
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.telemetry.TbMsgTimeseriesNode",
+        "name": "Save time series",
+        "debugMode": false,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "defaultTTL": 0,
+          "skipLatestPersistence": false,
+          "useServerTs": false
+        },
+        "additionalInfo": {
+          "description": "This rule save footprint diagnosis in time series",
+          "layoutX": 794,
+          "layoutY": 280
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.filter.TbMsgTypeSwitchNode",
+        "name": "post telemetry",
+        "debugMode": false,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "version": 0
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 484,
+          "layoutY": 209
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromIndex": 0,
+        "toIndex": 1,
+        "type": "True"
+      },
+      {
+        "fromIndex": 1,
+        "toIndex": 3,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 3,
+        "toIndex": 2,
+        "type": "Post telemetry"
+      }
+    ],
+    "ruleChainConnections": null
+  }
+}

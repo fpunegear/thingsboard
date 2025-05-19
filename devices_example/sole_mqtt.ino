@@ -3,39 +3,35 @@
 #include <Wire.h>
 #include <ArduinoJson.h>
 
-// Sole and sensor hardcoded data
 const char* id = "ASD123";
 const char* side = "right";
 
-const int numSensors = 8; // Using channels 0–7
+const int numSensors = 8;
 float listPositionsXY[numSensors][2] = {
-    {12.2, 10.3}, {12.5, 11.3}, {13.0, 12.1}, {14.4, 13.5},
-    {15.2, 14.8}, {16.1, 15.9}, {17.3, 16.4}, {18.0, 17.2}
+    {4, 18.3}, {1.1, 19.5}, {4.7, 14.7}, {0.5, 13.8},
+    {4.7, 9}, {1.3, 7.5}, {3, 0}, {1.5, 0}
 };
 
-// Replace with your WiFi credentials
 const char* ssid = "mywifi";
 const char* password = "supersecret";
 
-// MQTT Broker settings
 const char* mqtt_server = "192.168.0.8";
 const char* mqtt_topic = "v1/devices/me/telemetry";
 const char* mqtt_client_id = "sole101";
-const char* mqtt_user = "tenant@thingsboard.org"; // User
-const char* mqtt_password = "tenant"; // Password
+const char* mqtt_user = "tenant@thingsboard.org";
+const char* mqtt_password = "tenant";
+
 
 WiFiClient wifi_client;
 PubSubClient client(wifi_client);
 
 long lastMsg = 0;
 
-// Mux control pins
 int s0 = A0;
 int s1 = A1;
 int s2 = A2;
 int s3 = A3;
 
-// Mux SIG pin
 int SIG_pin = 4;
 
 void setup() {
@@ -52,7 +48,6 @@ void setup() {
   Serial.begin(115200);
   Serial.setDebugOutput(true);
 
-  // Connect to WiFi
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
@@ -98,44 +93,44 @@ void loop() {
   client.loop();
 
   long now = millis();
-  if (now - lastMsg > 5000) {
+  if (now - lastMsg > 1000) {
     lastMsg = now;
 
-    // Create JSON object
-    StaticJsonDocument<1024> res; // Increased size to handle larger JSON
-    res["id"] = id;
-    res["sd"] = side;
+    StaticJsonDocument<1024> payload;
 
-    // Add sensor values to JSON
-    JsonArray values = res.createNestedArray("vl");
+    payload["id"] = id;
+    payload["sd"] = side;
+    String sensorData = ""; // Initialize a separate String to hold sensor data
 
     for (int i = 0; i < numSensors; i++) {
-      JsonObject sensorValue = values.createNestedObject();
-      sensorValue["w"] = readMux(i);
+      float weight = readMux(i);
+      float posX = listPositionsXY[i][0];
+      float posY = listPositionsXY[i][1];
+      
+      // Append sensor data to the sensorData string
+      sensorData += String(posX) + "_" + String(posY) + "_" + String(weight) + ",";
 
-      JsonArray positions = sensorValue.createNestedArray("p");
-      positions.add(listPositionsXY[i][0]); // X position
-      positions.add(listPositionsXY[i][1]); // Y position
-
-      Serial.printf("Sensor %d: Weight = %.2f, Position = [%.2f, %.2f]\n", 
-                    i, readMux(i), listPositionsXY[i][0], listPositionsXY[i][1]);
+      Serial.printf("Sensor %d: Weight = %.2f, Position = [%.2f, %.2f]\n", i, weight, posX, posY);
     }
 
-    // Serialize JSON to string
-    String jsonString;
-    // String jsonString = "{\"id\":\"ASD123\",\"side\":\"right\",\"values\":[{\"weight\":0,\"position\":[12.2,10.3]},{\"weight\":0,\"position\":[12.5,11.3]},{\"weight\":0,\"position\":[13,12.1]},{\"weight\":0,\"position\":[14.4,13.5]},{\"weight\":0,\"position\":[15.2,14.8]}]}";
-    serializeJson(res, jsonString);
 
-    // Debug: Print JSON string
+
+    // Assign the built string to the payload
+    if (sensorData.length() > 0) {
+      sensorData.remove(sensorData.length() - 1); // Remove the last comma
+    }
+    payload["vl"] = sensorData; // Assign the final string to the payload
+
+    String jsonString;
+    serializeJson(payload, jsonString);
+
     Serial.println("[JSON] Sending data:");
     Serial.println(jsonString);
-    Serial.println(jsonString.c_str());
 
-    // Publish the message (publish fail if msg is too long)
     if (client.publish(mqtt_topic, jsonString.c_str())) {
-      Serial.println("Message sent successfully.");
+      Serial.println("[MQTT] Message sent successfully.");
     } else {
-      Serial.println("Message failed to send.");
+      Serial.println("[MQTT] Message failed to send.");
       Serial.println(client.state());
     }
   }
@@ -149,15 +144,12 @@ float readMux(int channel) {
     {0, 0, 1, 0}, {1, 0, 1, 0}, {0, 1, 1, 0}, {1, 1, 1, 0}
   };
 
-  // Set control pins
   for (int i = 0; i < 4; i++) {
     digitalWrite(controlPin[i], muxChannel[channel][i]);
   }
 
-  // Read the value at the SIG pin
   int val = analogRead(SIG_pin);
-
-  // Convert to voltage (optional)
-  float voltage = val; // (val * 5.0) / 1024.0;
+  float voltage = val;
+  // float voltage = (val * 5.0) / 1024.0;
   return voltage;
 }
