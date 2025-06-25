@@ -1,0 +1,107 @@
+{
+  "ruleChain": {
+    "name": "Sole Rule",
+    "type": "CORE",
+    "firstRuleNodeId": null,
+    "root": false,
+    "debugMode": false,
+    "configuration": null,
+    "additionalInfo": {
+      "description": ""
+    }
+  },
+  "metadata": {
+    "version": 13,
+    "firstNodeIndex": 0,
+    "nodes": [
+      {
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "Sole-selection",
+        "debugMode": false,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "return msg != null;\n// return msg.vl != null \n//     && msg.vl.length > 0;",
+          "tbelScript": "return msg.temperature > 20;"
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 150,
+          "layoutY": 22
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbTransformMsgNode",
+        "name": "footprint-diagnosis",
+        "debugMode": false,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "JS",
+          "jsScript": "// Ejemplo de json enviado por suela\n// {\n//     \"id\": \"ASD123\",\n//     \"sd\": \"right\",\n//     \"vl\": [\n//         {\n//         \"w\": 4095,\n//         \"p\": [\n//             12.2,\n//             10.3\n//         ]\n//         },\n//         {\n//         \"w\": 4095,\n//         \"p\": [\n//             12.5,\n//             11.3\n//         ]\n//         },\n//         {\n//         \"w\": 4095,\n//         \"p\": [\n//             13,\n//             12.1\n//         ]\n//         },\n//         {\n//         \"w\": 4095,\n//         \"p\": [\n//             14.4,\n//             13.5\n//         ]\n//         },\n//         {\n//         \"w\": 4095,\n//         \"p\": [\n//             15.2,\n//             14.8\n//         ]\n//         },\n//         {\n//         \"w\": 4095,\n//         \"p\": [\n//             16.1,\n//             15.9\n//         ]\n//         },\n//         {\n//         \"w\": 4095,\n//         \"p\": [\n//             17.3,\n//             16.4\n//         ]\n//         },\n//         {\n//         \"w\": 3983,\n//         \"p\": [\n//             18,\n//             17.2\n//         ]\n//         }\n//     ]\n//  }\n\nvar sumWeight = 0;\nvar sumPositionX = 0;\nvar sumPositionY = 0;\nvar xArray = [];\nvar yArray = [];\nvar higherPressureValue = msg.vl[0];\nvar typeOfFootprint = \"\";\n\nfor (var i = 0; i < msg.vl.length; i++) {\n    var value = msg.vl[i];\n    sumWeight += value.w;\n    sumPositionX += value.p[0] * value.w;\n    sumPositionY += value.p[1] * value.w;\n\n    // populate positions array\n    xArray.push(value.p[0]);\n    yArray.push(value.p[1]);\n\n    // find the high pressure\n    if (value.w > higherPressureValue.w) {\n        higherPressureValue = value;\n    }\n}\n\n// Verificar que sumWeight no sea 0 para evitar división por 0\nvar centerMassX = sumWeight && sumPositionX / sumWeight;\nvar centerMassY = sumWeight && sumPositionY / sumWeight;\n\n// Calcular la medida del pie\nvar minX = Math.min.apply(null, xArray);\nvar maxX = Math.max.apply(null, xArray);\nvar minY = Math.min.apply(null, yArray);\nvar maxY = Math.max.apply(null, yArray);\n\nvar footLength = maxX;\nvar footWidth = maxY;\n\n// Determinar tipo de pisada\nvar pronationLimit = footLength * 0.3;\nvar supinationLimit = footLength * 0.7;\n\nif (centerMassX < pronationLimit) {\n    typeOfFootprint = \"Sobrepronación\";\n} else if (centerMassX < pronationLimit * 1.1) {\n    typeOfFootprint = \"Pisada pronadora\";\n} else if (centerMassX > supinationLimit) {\n    typeOfFootprint = \"Sobresupinación\";\n} else if (centerMassX > supinationLimit * 0.9) {\n    typeOfFootprint = \"Pisada supinadora\";\n} else {\n    typeOfFootprint = \"Pisada neutra\";\n}\n\nreturn {\n    msg: {\n        id: msg.id,\n        sd: msg.sd,\n        vl: msg.vl,\n        centerOfMass: [centerMassX, centerMassY],\n        footLength: footLength,\n        footWidth: footWidth,\n        typeOfFootprint: typeOfFootprint,\n        higherPressureValue: higherPressureValue\n    },\n    metadata: metadata, \n    msgType: msgType\n};",
+          "tbelScript": "return {msg: msg, metadata: metadata, msgType: msgType};"
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 423,
+          "layoutY": 21
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.telemetry.TbMsgTimeseriesNode",
+        "name": "Save time series",
+        "debugMode": false,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "defaultTTL": 0,
+          "skipLatestPersistence": false,
+          "useServerTs": false
+        },
+        "additionalInfo": {
+          "description": "This rule save footprint diagnosis in time series",
+          "layoutX": 794,
+          "layoutY": 280
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.filter.TbMsgTypeSwitchNode",
+        "name": "post telemetry",
+        "debugMode": false,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "version": 0
+        },
+        "additionalInfo": {
+          "description": "",
+          "layoutX": 484,
+          "layoutY": 209
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromIndex": 0,
+        "toIndex": 1,
+        "type": "True"
+      },
+      {
+        "fromIndex": 1,
+        "toIndex": 3,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 3,
+        "toIndex": 2,
+        "type": "Post telemetry"
+      }
+    ],
+    "ruleChainConnections": null
+  }
+}
